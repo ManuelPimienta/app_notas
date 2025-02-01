@@ -21,26 +21,31 @@
         th {
             background-color: #f2f2f2;
         }
+        .logout-button {
+            float: right;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
     <h1>Notas de Estudiantes</h1>
+    <a href="{{ url_for('logout') }}" class="logout-button">Cerrar Sesión</a>
     <table>
         <thead>
             <tr>
                 <th>Estudiante</th>
-                <th>Matemáticas</th>
-                <th>Ciencias</th>
-                <th>Historia</th>
+                <th>HomeWork 1</th>
+                <th>Exposicion</th>
+                <th>Quiz</th>
             </tr>
         </thead>
         <tbody>
             {% for estudiante in notas %}
             <tr>
                 <td>{{ estudiante.Estudiante }}</td>
-                <td>{{ estudiante.Matemáticas }}</td>
-                <td>{{ estudiante.Ciencias }}</td>
-                <td>{{ estudiante.Historia }}</td>
+                <td>{{ estudiante.HomeWork 1 }}</td>
+                <td>{{ estudiante.Exposicion }}</td>
+                <td>{{ estudiante.Quiz }}</td>
             </tr>
             {% endfor %}
         </tbody>
