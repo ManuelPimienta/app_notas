@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notas de Estudiantes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Notas de Estudiantes</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Estudiante</th>
+                <th>Matemáticas</th>
+                <th>Ciencias</th>
+                <th>Historia</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for estudiante in notas %}
+            <tr>
+                <td>{{ estudiante.Estudiante }}</td>
+                <td>{{ estudiante.Matemáticas }}</td>
+                <td>{{ estudiante.Ciencias }}</td>
+                <td>{{ estudiante.Historia }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
