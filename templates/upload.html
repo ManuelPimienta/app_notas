@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subir Notas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        form {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Subir Notas</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <label for="curso">Selecciona el curso:</label>
+        <select name="curso" id="curso" required>
+            <option value="Curso A">Curso A</option>
+            <option value="Curso B">Curso B</option>
+        </select>
+        <label for="archivo">Sube el archivo de Excel:</label>
+        <input type="file" name="archivo" id="archivo" accept=".xlsx" required>
+        <button type="submit">Subir</button>
+    </form>
+</body>
+</html>

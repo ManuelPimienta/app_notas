@@ -3,52 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notas de Estudiantes</title>
+    <title>App de Notas</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
         }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
+        .menu {
+            display: flex;
+            gap: 10px;
         }
-        th {
-            background-color: #f2f2f2;
+        .button {
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
         }
-        .logout-button {
-            float: right;
-            margin-top: 10px;
+        .button.logout {
+            background-color: #dc3545;
+        }
+        .button.student {
+            background-color: #007bff;
+        }
+        .button.profesor {
+            background-color: #ffc107;
+            color: black;
         }
     </style>
 </head>
 <body>
-    <h1>Notas de Estudiantes</h1>
-    <a href="{{ url_for('logout') }}" class="logout-button">Cerrar Sesión</a>
-    <table>
-        <thead>
-            <tr>
-                <th>Estudiante</th>
-                <th>HomeWork_1</th>
-                <th>Exposicion</th>
-                <th>Quiz</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for estudiante in notas %}
-            <tr>
-                <td>{{ estudiante.Estudiante }}</td>
-                <td>{{ estudiante.HomeWork_1 }}</td>
-                <td>{{ estudiante.Exposicion }}</td>
-                <td>{{ estudiante.Quiz }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="header">
+        <h1>App de Notas</h1>
+        <div class="menu">
+            <!-- Opciones generales -->
+            <a href="{{ url_for('inicio') }}" class="button">Inicio</a>
+
+            <!-- Opciones para usuarios no autenticados -->
+            {% if not current_user.is_authenticated and 'estudiante' not in session %}
+                <a href="{{ url_for('login') }}" class="button profesor">Login Profesor</a>
+                <a href="{{ url_for('login_estudiante') }}" class="button student">Login Estudiante</a>
+            {% endif %}
+
+            <!-- Opciones para el profesor autenticado -->
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('upload') }}" class="button">Subir Notas</a>
+                <a href="{{ url_for('logout') }}" class="button logout">Cerrar Sesión (Profesor)</a>
+            {% endif %}
+
+            <!-- Opciones para el estudiante autenticado -->
+            {% if 'estudiante' in session %}
+                <a href="{{ url_for('notas_estudiante') }}" class="button">Ver Notas</a>
+                <a href="{{ url_for('logout_estudiante') }}" class="button logout">Cerrar Sesión (Estudiante)</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Contenido principal -->
+    <h2>Bienvenido a la App de Notas</h2>
+    {% if current_user.is_authenticated %}
+        <p>Hola, Profesor. Usa el menú superior para subir notas o cerrar sesión.</p>
+    {% elif 'estudiante' in session %}
+        <p>Hola, {{ estudiantes[session['estudiante']]['nombre'] }}. Usa el menú superior para ver tus notas o cerrar sesión.</p>
+    {% else %}
+        <p>Por favor, inicia sesión como profesor o estudiante para acceder a las funciones.</p>
+    {% endif %}
 </body>
 </html>
