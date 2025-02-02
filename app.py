@@ -1,12 +1,12 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session as flask_session  # Renombrar la sesión de Flask
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from models import session as db_session, Curso, Estudiante, Nota  # Renombrar la sesión de SQLAlchemy
 import pandas as pd
 import os
-import csv
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.secret_key = "clave_secreta"
+app.secret_key = "clave_secreta"  # Clave secreta para las sesiones de Flask
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
 
@@ -18,12 +18,6 @@ login_manager.login_view = "login"
 # Simulación de usuarios (profesores)
 usuarios = {
     "profesor": {"password": "claveprofesor", "nombre": "Profesor"}
-}
-
-# Almacenar notas por curso (global para este ejemplo, en producción usa una base de datos)
-notas_por_curso = {
-    "Curso A": [],
-    "Curso B": []
 }
 
 # Clase Usuario para Flask-Login
@@ -43,30 +37,10 @@ class Usuario(UserMixin):
 def load_user(usuario_id):
     return Usuario.obtener(usuario_id)
 
-# Cargar estudiantes desde el archivo CSV
-def cargar_estudiantes():
-    estudiantes = {}
-    try:
-        with open('estudiantes.csv', mode='r') as file:
-            reader = csv.DictReader(file)
-            for row in reader:
-                if 'id' in row and 'nombre' in row and 'curso' in row:
-                    estudiantes[row['id']] = {
-                        "nombre": row['nombre'],
-                        "curso": row['curso']
-                    }
-    except FileNotFoundError:
-        print("Error: El archivo 'estudiantes.csv' no existe.")
-    except Exception as e:
-        print(f"Error al leer el archivo CSV: {str(e)}")
-    return estudiantes
-
-estudiantes = cargar_estudiantes()
-
 # Ruta principal
 @app.route("/")
 def inicio():
-    return render_template("index.html", estudiantes=estudiantes)
+    return render_template("index.html")
 
 # Ruta para el login del profesor
 @app.route("/login", methods=["GET", "POST"])
@@ -87,36 +61,41 @@ def login():
 def login_estudiante():
     if request.method == "POST":
         id_estudiante = request.form["id"]
-        if id_estudiante in estudiantes:
-            # Crear una sesión para el estudiante
-            session['estudiante'] = id_estudiante
-            return redirect(url_for("inicio"))
-        else:
-            flash("Número de identificación incorrecto", "error")
+        print(f"Buscando estudiante con ID: {id_estudiante}")  # Depuración
+        
+        try:
+            id_estudiante = int(id_estudiante)
+            estudiante = db_session.query(Estudiante).filter_by(id=id_estudiante).first()
+            
+            if estudiante:
+                print(f"Estudiante encontrado: {estudiante.nombre}")  # Depuración
+                flask_session['estudiante_id'] = estudiante.id
+                return redirect(url_for("notas_estudiante"))
+            else:
+                print("Estudiante no encontrado")  # Depuración
+                flash("Número de identificación incorrecto", "error")
+        except ValueError:
+            flash("El ID debe ser un número válido", "error")
+    
     return render_template("login_estudiante.html")
 
 # Ruta para mostrar las notas del estudiante
 @app.route("/notas-estudiante")
 def notas_estudiante():
-    if 'estudiante' not in session:
+    if 'estudiante_id' not in flask_session:
         return redirect(url_for("login_estudiante"))
 
-    id_estudiante = session['estudiante']
-    estudiante = estudiantes[id_estudiante]
-    curso = estudiante["curso"]
-    notas = notas_por_curso.get(curso, [])
+    estudiante = db_session.query(Estudiante).filter_by(id=flask_session['estudiante_id']).first()
+    notas = db_session.query(Nota).filter_by(estudiante_id=estudiante.id).all()
 
-    # Filtrar las notas del estudiante actual
-    notas_estudiante = [nota for nota in notas if nota["Estudiante"] == estudiante["nombre"]]
-
-    return render_template("notas_estudiante.html", notas=notas_estudiante, estudiante=estudiante)
+    return render_template("notas_estudiante.html", notas=notas, estudiante=estudiante)
 
 # Ruta para subir archivos de Excel
 @app.route("/upload", methods=["GET", "POST"])
 @login_required
 def upload():
     if request.method == "POST":
-        curso = request.form["curso"]
+        curso_nombre = request.form["curso"]
         archivo = request.files["archivo"]
 
         if archivo.filename == "":
@@ -133,19 +112,71 @@ def upload():
 
         try:
             df = pd.read_excel(ruta_archivo)
-            columnas_esperadas = ["Estudiante", "Running Average", "Letter Grade", "Conducta2", "Actividad 1", "Actividad 2"]
-            if not all(col in df.columns for col in columnas_esperadas):
-                flash("El archivo no tiene la estructura esperada.", "error")
+            
+            # Columnas obligatorias
+            columnas_obligatorias = [
+                "Estudiante", 
+                "Running Average", 
+                "Letter Grade", 
+                "Conducta2"
+            ]
+            if not all(col in df.columns for col in columnas_obligatorias):
+                flash("El archivo no tiene las columnas obligatorias.", "error")
                 return redirect(url_for("upload"))
 
-            # Convertir las notas a una lista de diccionarios
-            notas = df.to_dict(orient="records")
-            notas_por_curso[curso] = notas  # Almacenar las notas en el curso correspondiente
-            flash(f"Archivo subido correctamente para el curso {curso}.", "success")
+            # Detectar columnas de actividades dinámicamente
+            actividades = [col for col in df.columns if col.startswith("Actividad")]
+            
+            # Buscar o crear el curso
+            curso = db_session.query(Curso).filter_by(nombre=curso_nombre).first()
+            if not curso:
+                curso = Curso(nombre=curso_nombre)
+                db_session.add(curso)
+                db_session.commit()
+
+            # Procesar cada fila del archivo
+            for _, row in df.iterrows():
+                estudiante = db_session.query(Estudiante).filter_by(nombre=row["Estudiante"]).first()
+                
+                # Si el estudiante no existe, crearlo con los nuevos campos
+                if not estudiante:
+                    estudiante = Estudiante(
+                        nombre=row["Estudiante"],
+                        curso_id=curso.id,
+                        running_average=row["Running Average"],
+                        letter_grade=row["Letter Grade"],
+                        conducta2=row["Conducta2"]
+                    )
+                else:
+                    # Actualizar los campos si el estudiante ya existe
+                    estudiante.running_average = row["Running Average"]
+                    estudiante.letter_grade = row["Letter Grade"]
+                    estudiante.conducta2 = row["Conducta2"]
+                
+                db_session.add(estudiante)
+                db_session.commit()
+
+                # Eliminar notas existentes para evitar duplicados
+                db_session.query(Nota).filter_by(estudiante_id=estudiante.id).delete()
+                db_session.commit()
+
+                # Guardar las notas dinámicamente
+                for actividad in actividades:
+                    calificacion = row[actividad]
+                    nota = Nota(
+                        estudiante_id=estudiante.id,
+                        actividad=actividad,
+                        calificacion=calificacion
+                    )
+                    db_session.add(nota)
+                db_session.commit()
+
+            flash("¡Datos actualizados correctamente!", "success")
         except Exception as e:
-            flash(f"Error al procesar el archivo: {str(e)}", "error")
+            db_session.rollback()
+            flash(f"Error: {str(e)}", "error")
         finally:
-            os.remove(ruta_archivo)  # Eliminar el archivo después de procesarlo
+            os.remove(ruta_archivo)
 
         return redirect(url_for("upload"))
 
@@ -161,7 +192,7 @@ def logout():
 # Ruta para cerrar sesión del estudiante
 @app.route("/logout-estudiante")
 def logout_estudiante():
-    session.pop('estudiante', None)
+    flask_session.pop('estudiante_id', None)
     return redirect(url_for("inicio"))
 
 # Función para verificar extensiones de archivo permitidas

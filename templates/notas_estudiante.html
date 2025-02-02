@@ -5,14 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Notas del Estudiante</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin: 20px 0;
         }
         th, td {
             border: 1px solid #ddd;
@@ -22,48 +18,42 @@
         th {
             background-color: #f2f2f2;
         }
-        .logout-button {
-            padding: 10px;
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
+        .info-general {
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
     <h1>Notas de {{ estudiante.nombre }}</h1>
-    <a href="{{ url_for('logout_estudiante') }}" class="logout-button">Cerrar Sesión</a>
+    <a href="{{ url_for('logout_estudiante') }}">Cerrar Sesión</a>
 
+    <div class="info-general">
+        <h3>Información General:</h3>
+        <p>Promedio: {{ estudiante.running_average }}</p>
+        <p>Calificación Literal: {{ estudiante.letter_grade }}</p>
+        <p>Conducta: {{ estudiante.conducta2 }}</p>
+    </div>
+
+    <h3>Actividades:</h3>
     {% if notas %}
     <table>
         <thead>
             <tr>
-                <th>Estudiante</th>
-                <th>Running Average</th>
-                <th>Letter Grade</th>
-                <th>Conducta2</th>
-                <th>Actividad 1</th>
-                <th>Actividad 2</th>
+                <th>Actividad</th>
+                <th>Calificación</th>
             </tr>
         </thead>
         <tbody>
             {% for nota in notas %}
             <tr>
-                <td>{{ nota.Estudiante }}</td>
-                <td>{{ nota['Running Average'] }}</td>
-                <td>{{ nota['Letter Grade'] }}</td>
-                <td>{{ nota.Conducta2 }}</td>
-                <td>{{ nota['Actividad 1'] }}</td>
-                <td>{{ nota['Actividad 2'] }}</td>
+                <td>{{ nota.actividad }}</td>
+                <td>{{ nota.calificacion }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
     {% else %}
-    <p>No hay notas disponibles.</p>
+    <p>No hay notas de actividades disponibles.</p>
     {% endif %}
 </body>
 </html>
