@@ -14,12 +14,12 @@ class Curso(Base):
 
 class Estudiante(Base):
     __tablename__ = 'estudiantes'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=False)  # ID no autoincremental
     nombre = Column(String, nullable=False)
     curso_id = Column(Integer, ForeignKey('cursos.id'))
-    running_average = Column(Float)  # Nueva columna
-    letter_grade = Column(String)    # Nueva columna
-    conducta2 = Column(Float)        # Nueva columna
+    running_average = Column(Float)
+    letter_grade = Column(String)
+    conducta2 = Column(Float)
     curso = relationship("Curso", back_populates="estudiantes")
     notas = relationship("Nota", back_populates="estudiante")
 

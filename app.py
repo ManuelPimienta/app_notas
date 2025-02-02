@@ -61,22 +61,17 @@ def login():
 def login_estudiante():
     if request.method == "POST":
         id_estudiante = request.form["id"]
-        print(f"Buscando estudiante con ID: {id_estudiante}")  # Depuración
-        
         try:
             id_estudiante = int(id_estudiante)
             estudiante = db_session.query(Estudiante).filter_by(id=id_estudiante).first()
-            
             if estudiante:
-                print(f"Estudiante encontrado: {estudiante.nombre}")  # Depuración
+                # Crear una sesión para el estudiante
                 flask_session['estudiante_id'] = estudiante.id
                 return redirect(url_for("notas_estudiante"))
             else:
-                print("Estudiante no encontrado")  # Depuración
                 flash("Número de identificación incorrecto", "error")
         except ValueError:
             flash("El ID debe ser un número válido", "error")
-    
     return render_template("login_estudiante.html")
 
 # Ruta para mostrar las notas del estudiante
@@ -115,6 +110,7 @@ def upload():
             
             # Columnas obligatorias
             columnas_obligatorias = [
+                "ID",  # Nueva columna para el ID de identificación
                 "Estudiante", 
                 "Running Average", 
                 "Letter Grade", 
@@ -136,25 +132,28 @@ def upload():
 
             # Procesar cada fila del archivo
             for _, row in df.iterrows():
-                estudiante = db_session.query(Estudiante).filter_by(nombre=row["Estudiante"]).first()
+                # Buscar al estudiante por ID
+                estudiante = db_session.query(Estudiante).filter_by(id=row["ID"]).first()
                 
-                # Si el estudiante no existe, crearlo con los nuevos campos
+                # Si el estudiante no existe, crearlo
                 if not estudiante:
                     estudiante = Estudiante(
+                        id=row["ID"],  # Usar el ID del archivo
                         nombre=row["Estudiante"],
                         curso_id=curso.id,
                         running_average=row["Running Average"],
                         letter_grade=row["Letter Grade"],
                         conducta2=row["Conducta2"]
                     )
+                    db_session.add(estudiante)
+                    db_session.commit()
                 else:
-                    # Actualizar los campos si el estudiante ya existe
+                    # Si el estudiante ya existe, actualizar sus datos
+                    estudiante.nombre = row["Estudiante"]
                     estudiante.running_average = row["Running Average"]
                     estudiante.letter_grade = row["Letter Grade"]
                     estudiante.conducta2 = row["Conducta2"]
-                
-                db_session.add(estudiante)
-                db_session.commit()
+                    db_session.commit()
 
                 # Eliminar notas existentes para evitar duplicados
                 db_session.query(Nota).filter_by(estudiante_id=estudiante.id).delete()
