@@ -204,4 +204,4 @@ if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)  # Cambia a False para producción
