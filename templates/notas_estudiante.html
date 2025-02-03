@@ -3,57 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notas del Estudiante</title>
+    <title>Notas del Estudiante - Sistema de Notas</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-        th, td {
+        .notas-container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 20px;
             border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-        th {
-            background-color: #f2f2f2;
+        .info-card {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
         }
-        .info-general {
-            margin-bottom: 20px;
+        .table-responsive {
+            overflow-x: auto;
         }
     </style>
 </head>
 <body>
-    <h1>Notas de {{ estudiante.nombre }}</h1>
-    <a href="{{ url_for('logout_estudiante') }}">Cerrar Sesión</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">Sistema de Notas</a>
+            <div class="navbar-nav ms-auto">
+                <a href="{{ url_for('logout_estudiante') }}" class="btn btn-light">Cerrar Sesión</a>
+            </div>
+        </div>
+    </nav>
 
-    <div class="info-general">
-        <h3>Información General:</h3>
-        <p>Promedio: {{ estudiante.running_average }}</p>
-        <p>Calificación Literal: {{ estudiante.letter_grade }}</p>
-        <p>Conducta: {{ estudiante.conducta2 }}</p>
+    <div class="container">
+        <div class="notas-container">
+            <!-- Mensajes flash -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <h1 class="text-center mb-4">Notas de {{ estudiante.nombre }}</h1>
+
+            <!-- Información General -->
+            <div class="info-card">
+                <h3 class="mb-3">Información General</h3>
+                <div class="row">
+                    <div class="col-md-4">
+                        <p><strong>Promedio:</strong><br>{{ estudiante.running_average }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p><strong>Calificación Literal:</strong><br>{{ estudiante.letter_grade }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p><strong>Conducta:</strong><br>{{ estudiante.conducta2 }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Actividades -->
+            <h3 class="mb-3">Actividades</h3>
+            {% if notas %}
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped">
+                        <thead class="table-primary">
+                            <tr>
+                                <th>Actividad</th>
+                                <th>Calificación</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for nota in notas %}
+                            <tr>
+                                <td>{{ nota.actividad }}</td>
+                                <td>{{ nota.calificacion }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    No hay notas de actividades disponibles.
+                </div>
+            {% endif %}
+        </div>
     </div>
 
-    <h3>Actividades:</h3>
-    {% if notas %}
-    <table>
-        <thead>
-            <tr>
-                <th>Actividad</th>
-                <th>Calificación</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for nota in notas %}
-            <tr>
-                <td>{{ nota.actividad }}</td>
-                <td>{{ nota.calificacion }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p>No hay notas de actividades disponibles.</p>
-    {% endif %}
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
