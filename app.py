@@ -20,6 +20,24 @@ usuarios = {
     "profesor": {"password": "claveprofesor", "nombre": "Profesor"}
 }
 
+# En app.py, antes de iniciar la aplicación
+with app.app_context():
+    cursos_predefinidos = [
+        "Ciencias Sociales 9A",
+        "Ciencias Sociales 9B",
+        "Ciencias Sociales 9C",
+        "Ciencias Sociales 10A",
+        "Ciencias Sociales 10B",
+        "Ciencias Sociales 11A",
+        "Ciencias Sociales 11B"
+    ]
+    for nombre_curso in cursos_predefinidos:
+        curso = db_session.query(Curso).filter_by(nombre=nombre_curso).first()
+        if not curso:
+            nuevo_curso = Curso(nombre=nombre_curso)
+            db_session.add(nuevo_curso)
+    db_session.commit()
+
 # Clase Usuario para Flask-Login
 class Usuario(UserMixin):
     def __init__(self, id):
@@ -93,75 +111,93 @@ def upload():
         curso_nombre = request.form["curso"]
         archivo = request.files["archivo"]
 
+        # Validar que se haya seleccionado un archivo
         if archivo.filename == "":
             flash("No se seleccionó ningún archivo.", "error")
             return redirect(url_for("upload"))
 
+        # Validar la extensión del archivo
         if not allowed_file(archivo.filename):
             flash("Solo se permiten archivos de Excel (.xlsx).", "error")
             return redirect(url_for("upload"))
 
+        # Guardar el archivo temporalmente
         filename = secure_filename(archivo.filename)
         ruta_archivo = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         archivo.save(ruta_archivo)
 
         try:
+            # Leer el archivo Excel
             df = pd.read_excel(ruta_archivo)
             
+            # Eliminar filas completamente vacías
+            df = df.dropna(how="all")
+            
+            # Eliminar filas donde las columnas obligatorias estén vacías
+            df = df.dropna(subset=["ID", "Estudiante"])
+            
+            # Verificar que el archivo no esté vacío después de la limpieza
+            if df.empty:
+                flash("El archivo no tiene datos válidos.", "error")
+                return redirect(url_for("upload"))
+
             # Columnas obligatorias
-            columnas_obligatorias = [
-                "ID",  # Nueva columna para el ID de identificación
-                "Estudiante", 
-                "Running Average", 
-                "Letter Grade", 
-                "Conducta2"
-            ]
+            columnas_obligatorias = ["ID", "Estudiante", "Running Average", "Letter Grade", "Conducta2"]
             if not all(col in df.columns for col in columnas_obligatorias):
                 flash("El archivo no tiene las columnas obligatorias.", "error")
                 return redirect(url_for("upload"))
 
-            # Detectar columnas de actividades dinámicamente
-            actividades = [col for col in df.columns if col.startswith("Actividad")]
-            
+            # Convertir ID a entero
+            try:
+                df["ID"] = df["ID"].astype(int)
+            except ValueError:
+                flash("La columna 'ID' debe contener solo números enteros.", "error")
+                return redirect(url_for("upload"))
+
             # Buscar o crear el curso
             curso = db_session.query(Curso).filter_by(nombre=curso_nombre).first()
             if not curso:
-                curso = Curso(nombre=curso_nombre)
-                db_session.add(curso)
-                db_session.commit()
+                flash("El curso seleccionado no existe.", "error")
+                return redirect(url_for("upload"))
 
             # Procesar cada fila del archivo
             for _, row in df.iterrows():
+                # Reemplazar NaN en campos numéricos
+                running_avg = row["Running Average"] if not pd.isna(row["Running Average"]) else 0.0
+                conducta = row["Conducta2"] if not pd.isna(row["Conducta2"]) else 0.0
+                letter_grade = row["Letter Grade"] if not pd.isna(row["Letter Grade"]) else "N/A"
+
                 # Buscar al estudiante por ID
                 estudiante = db_session.query(Estudiante).filter_by(id=row["ID"]).first()
                 
                 # Si el estudiante no existe, crearlo
                 if not estudiante:
                     estudiante = Estudiante(
-                        id=row["ID"],  # Usar el ID del archivo
+                        id=row["ID"],
                         nombre=row["Estudiante"],
                         curso_id=curso.id,
-                        running_average=row["Running Average"],
-                        letter_grade=row["Letter Grade"],
-                        conducta2=row["Conducta2"]
+                        running_average=running_avg,
+                        letter_grade=letter_grade,
+                        conducta2=conducta
                     )
                     db_session.add(estudiante)
-                    db_session.commit()
                 else:
                     # Si el estudiante ya existe, actualizar sus datos
                     estudiante.nombre = row["Estudiante"]
-                    estudiante.running_average = row["Running Average"]
-                    estudiante.letter_grade = row["Letter Grade"]
-                    estudiante.conducta2 = row["Conducta2"]
-                    db_session.commit()
+                    estudiante.running_average = running_avg
+                    estudiante.letter_grade = letter_grade
+                    estudiante.conducta2 = conducta
+
+                db_session.commit()
 
                 # Eliminar notas existentes para evitar duplicados
                 db_session.query(Nota).filter_by(estudiante_id=estudiante.id).delete()
                 db_session.commit()
 
                 # Guardar las notas dinámicamente
+                actividades = [col for col in df.columns if col.startswith("Actividad")]
                 for actividad in actividades:
-                    calificacion = row[actividad]
+                    calificacion = row[actividad] if not pd.isna(row[actividad]) else 0.0
                     nota = Nota(
                         estudiante_id=estudiante.id,
                         actividad=actividad,
@@ -175,7 +211,9 @@ def upload():
             db_session.rollback()
             flash(f"Error: {str(e)}", "error")
         finally:
-            os.remove(ruta_archivo)
+            # Eliminar el archivo temporal
+            if os.path.exists(ruta_archivo):
+                os.remove(ruta_archivo)
 
         return redirect(url_for("upload"))
 
@@ -193,6 +231,33 @@ def logout():
 def logout_estudiante():
     flask_session.pop('estudiante_id', None)
     return redirect(url_for("inicio"))
+
+# Ruta para buscar estudiantes
+@app.route("/buscar-estudiante", methods=["GET"])
+@login_required
+def buscar_estudiante():
+    query = request.args.get("q", "").strip()  # Término de búsqueda
+    curso_nombre = request.args.get("curso", "").strip()  # Curso seleccionado
+
+    # Construir la consulta base
+    consulta = db_session.query(Estudiante)
+
+    # Filtrar por curso si se seleccionó uno
+    if curso_nombre:
+        curso = db_session.query(Curso).filter_by(nombre=curso_nombre).first()
+        if curso:
+            consulta = consulta.filter_by(curso_id=curso.id)
+
+    # Filtrar por nombre o ID
+    if query:
+        consulta = consulta.filter(
+            (Estudiante.nombre.ilike(f"%{query}%")) | (Estudiante.id == query)
+        )
+
+    # Ejecutar la consulta
+    estudiantes = consulta.all()
+
+    return render_template("resultados_busqueda.html", estudiantes=estudiantes, query=query, curso_nombre=curso_nombre)
 
 # Función para verificar extensiones de archivo permitidas
 def allowed_file(filename):

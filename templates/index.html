@@ -9,74 +9,102 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            background-color: #f8f9fa;
         }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .menu {
-            display: flex;
-            gap: 10px;
-        }
-        .button {
-            padding: 10px;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-        }
-        .button.logout {
-            background-color: #dc3545;
-        }
-        .button.student {
+        .navbar-custom {
             background-color: #007bff;
         }
-        .button.profesor {
-            background-color: #ffc107;
-            color: black;
+        .navbar-custom .navbar-brand,
+        .navbar-custom .nav-link {
+            color: white !important;
+        }
+        .welcome-section {
+            padding: 60px 0;
+            text-align: center;
+            background-color: #ffffff;
+            border-bottom: 1px solid #ddd;
+        }
+        .welcome-section h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+        .welcome-section p {
+            font-size: 1.2rem;
+            color: #666;
+        }
+        .btn-custom {
+            margin: 5px;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>App de Notas</h1>
-        <div class="menu">
-            <!-- Opciones generales -->
-            <a href="{{ url_for('inicio') }}" class="button">Inicio</a>
+    <!-- Barra de navegación -->
+    <nav class="navbar navbar-expand-lg navbar-custom">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('inicio') }}">App de Notas</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <!-- Opciones generales -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('inicio') }}">Inicio</a>
+                    </li>
 
-            <!-- Opciones para usuarios no autenticados -->
-            {% if not current_user.is_authenticated and 'estudiante' not in session %}
-                <a href="{{ url_for('login') }}" class="button profesor">Login Profesor</a>
-                <a href="{{ url_for('login_estudiante') }}" class="button student">Login Estudiante</a>
-            {% endif %}
+                    <!-- Opciones para usuarios no autenticados -->
+                    {% if not current_user.is_authenticated and 'estudiante' not in session %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('login') }}">Login Profesor</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('login_estudiante') }}">Login Estudiante</a>
+                        </li>
+                    {% endif %}
 
-            <!-- Opciones para el profesor autenticado -->
+                    <!-- Opciones para el profesor autenticado -->
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('upload') }}">Subir Notas</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('logout') }}">Cerrar Sesión (Profesor)</a>
+                        </li>
+                    {% endif %}
+
+                    <!-- Opciones para el estudiante autenticado -->
+                    {% if 'estudiante' in session %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('notas_estudiante') }}">Ver Notas</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('logout_estudiante') }}">Cerrar Sesión (Estudiante)</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sección de bienvenida -->
+    <div class="welcome-section">
+        <div class="container">
+            <h1>Bienvenido a la App de Notas</h1>
             {% if current_user.is_authenticated %}
-                <a href="{{ url_for('upload') }}" class="button">Subir Notas</a>
-                <a href="{{ url_for('logout') }}" class="button logout">Cerrar Sesión (Profesor)</a>
-            {% endif %}
-
-            <!-- Opciones para el estudiante autenticado -->
-            {% if 'estudiante' in session %}
-                <a href="{{ url_for('notas_estudiante') }}" class="button">Ver Notas</a>
-                <a href="{{ url_for('logout_estudiante') }}" class="button logout">Cerrar Sesión (Estudiante)</a>
+                <p>Hola, Profesor. Usa el menú superior para subir notas o cerrar sesión.</p>
+            {% elif 'estudiante' in session %}
+                <p>Hola, {{ estudiantes[session['estudiante']]['nombre'] }}. Usa el menú superior para ver tus notas o cerrar sesión.</p>
+            {% else %}
+                <p>Por favor, inicia sesión como profesor o estudiante para acceder a las funciones.</p>
+                <div>
+                    <a href="{{ url_for('login') }}" class="btn btn-warning btn-custom">Login Profesor</a>
+                    <a href="{{ url_for('login_estudiante') }}" class="btn btn-primary btn-custom">Login Estudiante</a>
+                </div>
             {% endif %}
         </div>
     </div>
 
-    <!-- Contenido principal -->
-    <h2>Bienvenido a la App de Notas</h2>
-    {% if current_user.is_authenticated %}
-        <p>Hola, Profesor. Usa el menú superior para subir notas o cerrar sesión.</p>
-    {% elif 'estudiante' in session %}
-        <p>Hola, {{ estudiantes[session['estudiante']]['nombre'] }}. Usa el menú superior para ver tus notas o cerrar sesión.</p>
-    {% else %}
-        <p>Por favor, inicia sesión como profesor o estudiante para acceder a las funciones.</p>
-    {% endif %}
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
