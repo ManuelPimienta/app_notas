@@ -101,7 +101,10 @@ def notas_estudiante():
     estudiante = db_session.query(Estudiante).filter_by(id=flask_session['estudiante_id']).first()
     notas = db_session.query(Nota).filter_by(estudiante_id=estudiante.id).all()
 
-    return render_template("notas_estudiante.html", notas=notas, estudiante=estudiante)
+    # Obtener las actividades únicas
+    actividades = list(set(nota.actividad for nota in notas))
+
+    return render_template("notas_estudiante.html", notas=notas, estudiante=estudiante, actividades=actividades)
 
 # Ruta para subir archivos de Excel
 @app.route("/upload", methods=["GET", "POST"])
@@ -128,15 +131,9 @@ def upload():
 
         try:
             # Leer el archivo Excel
-            df = pd.read_excel(ruta_archivo)
-            
-            # Eliminar filas completamente vacías
-            df = df.dropna(how="all")
-            
-            # Eliminar filas donde las columnas obligatorias estén vacías
-            df = df.dropna(subset=["ID", "Estudiante"])
-            
-            # Verificar que el archivo no esté vacío después de la limpieza
+            df = pd.read_excel(ruta_archivo, sheet_name="Hoja1", engine="openpyxl")  # Cambia "Hoja1" por el nombre de tu hoja
+
+            # Verificar que el archivo no esté vacío
             if df.empty:
                 flash("El archivo no tiene datos válidos.", "error")
                 return redirect(url_for("upload"))
@@ -147,18 +144,31 @@ def upload():
                 flash("El archivo no tiene las columnas obligatorias.", "error")
                 return redirect(url_for("upload"))
 
-            # Convertir ID a entero
-            try:
-                df["ID"] = df["ID"].astype(int)
-            except ValueError:
-                flash("La columna 'ID' debe contener solo números enteros.", "error")
+            # Limpiar la columna "ID"
+            # Eliminar filas donde la columna "ID" esté vacía o no sea un número válido
+            df = df.dropna(subset=["ID"])  # Eliminar filas con "ID" vacío
+            df = df[pd.to_numeric(df["ID"], errors="coerce").notna()]  # Eliminar filas donde "ID" no sea un número
+
+            # Verificar que el archivo no esté vacío después de la limpieza
+            if df.empty:
+                flash("El archivo no tiene datos válidos después de la limpieza.", "error")
                 return redirect(url_for("upload"))
+
+            # Convertir la columna "ID" a enteros
+            df["ID"] = df["ID"].astype(int)
 
             # Buscar o crear el curso
             curso = db_session.query(Curso).filter_by(nombre=curso_nombre).first()
             if not curso:
                 flash("El curso seleccionado no existe.", "error")
                 return redirect(url_for("upload"))
+
+            # Identificar dinámicamente las columnas de actividades
+            # Todas las columnas que no son obligatorias se consideran actividades
+            actividades = [col for col in df.columns if col not in columnas_obligatorias]
+
+            # Filtrar columnas no válidas (por ejemplo, "Unnamed" o vacías)
+            actividades = [col for col in actividades if not col.startswith("Unnamed") and not col.strip() == ""]
 
             # Procesar cada fila del archivo
             for _, row in df.iterrows():
@@ -195,7 +205,6 @@ def upload():
                 db_session.commit()
 
                 # Guardar las notas dinámicamente
-                actividades = [col for col in df.columns if col.startswith("Actividad")]
                 for actividad in actividades:
                     calificacion = row[actividad] if not pd.isna(row[actividad]) else 0.0
                     nota = Nota(
