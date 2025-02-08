@@ -46,3 +46,30 @@
 2025-02-08 15:38:43,708 - app - DEBUG - Restaurando la base de datos desde el backup: backups\backup_20250208_153830.db
 2025-02-08 15:38:43,711 - app - DEBUG - Reiniciando la sesión de SQLAlchemy...
 2025-02-08 15:38:43,712 - app - ERROR - Error al restaurar el backup: 'Session' object has no attribute 'remove'
+2025-02-08 16:00:49,902 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\notas_9A_.xlsx
+2025-02-08 16:00:50,272 - app - ERROR - Error al procesar el archivo Excel: 'Campo'
+2025-02-08 16:01:31,943 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\notas_9A_.xlsx
+2025-02-08 16:01:31,967 - app - ERROR - Error al procesar el archivo Excel: 'Campo'
+2025-02-08 16:02:34,855 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\notas_9A_.xlsx
+2025-02-08 16:02:34,881 - app - ERROR - Error al procesar el archivo Excel: 'Campo'
+2025-02-08 16:03:14,582 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\notas_9A_.xlsx
+2025-02-08 16:03:14,654 - app - ERROR - Error al procesar el archivo Excel: 'Campo'
+2025-02-08 16:05:27,402 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\notas_9A_.xlsx
+2025-02-08 16:05:27,749 - app - ERROR - Error al procesar el archivo Excel: 'Campo'
+2025-02-08 16:07:11,777 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\notas_9A_.xlsx
+2025-02-08 16:07:11,831 - app - ERROR - Error al procesar el archivo Excel: index 0 is out of bounds for axis 0 with size 0
+2025-02-08 16:10:55,888 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\notas_9A_.xlsx
+2025-02-08 16:11:27,719 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\notas_9A_.xlsx
+2025-02-08 16:11:28,130 - app - ERROR - Error al procesar el archivo Excel: index 0 is out of bounds for axis 0 with size 0
+2025-02-08 16:13:22,719 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\notas_9A_.xlsx
+2025-02-08 16:13:22,743 - app - DEBUG - Metadatos del archivo: Curso=Ciencias Sociales 9A, Periodo=2025-1, Profesor=Manuel Pimienta
+2025-02-08 16:13:22,752 - app - ERROR - Error al procesar el archivo Excel: Worksheet named 'Notas' not found
+2025-02-08 16:13:49,365 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\notas_9A_.xlsx
+2025-02-08 16:13:49,388 - app - DEBUG - Metadatos del archivo: Curso=Ciencias Sociales 9A, Periodo=2025-1, Profesor=Manuel Pimienta
+2025-02-08 16:13:49,406 - app - DEBUG - Procesando filas del archivo Excel...
+2025-02-08 16:13:49,774 - app - DEBUG - Datos actualizados correctamente.
+2025-02-08 16:15:08,471 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\notas_9A_.xlsx
+2025-02-08 16:15:08,824 - app - DEBUG - Metadatos del archivo: Curso=Ciencias Sociales 9A, Periodo=2025-1, Profesor=Manuel Pimienta
+2025-02-08 16:15:08,838 - app - DEBUG - Procesando filas del archivo Excel...
+2025-02-08 16:15:09,124 - app - DEBUG - Datos actualizados correctamente.
+2025-02-08 16:15:20,915 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\notas_9A_.xlsx
