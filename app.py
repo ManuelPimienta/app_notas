@@ -4,11 +4,47 @@ from models import session as db_session, Curso, Estudiante, Nota  # Renombrar l
 import pandas as pd
 import os
 from werkzeug.utils import secure_filename
+import os
+import shutil
+from datetime import datetime
+from sqlalchemy import create_engine
 
 app = Flask(__name__)
 app.secret_key = "clave_secreta"  # Clave secreta para las sesiones de Flask
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
+
+# Configuración de la carpeta de backups
+BACKUP_FOLDER = "backups"
+if not os.path.exists(BACKUP_FOLDER):
+    os.makedirs(BACKUP_FOLDER)
+
+def crear_backup():
+    """
+    Crea una copia de seguridad de la base de datos antes de una actualización.
+    """
+    try:
+        # Nombre del archivo de backup (incluye la fecha y hora actual)
+        fecha_hora = datetime.now().strftime("%Y%m%d_%H%M%S")
+        nombre_backup = f"backup_{fecha_hora}.db"
+        ruta_backup = os.path.join(BACKUP_FOLDER, nombre_backup)
+
+        # Ruta de la base de datos actual
+        ruta_base_datos = "app_notas.db"  # Cambia esto si tu base de datos tiene otro nombre o ruta
+
+        # Verificar si el archivo de la base de datos existe
+        if not os.path.exists(ruta_base_datos):
+            print(f"Error: No se encontró el archivo de la base de datos en {ruta_base_datos}")
+            return False
+
+        # Crear una copia de la base de datos actual
+        shutil.copy2(ruta_base_datos, ruta_backup)
+
+        print(f"Backup creado exitosamente: {ruta_backup}")
+        return True
+    except Exception as e:
+        print(f"Error al crear el backup: {e}")
+        return False
 
 # Configuración de Flask-Login
 login_manager = LoginManager()
@@ -122,6 +158,11 @@ def upload():
         # Validar la extensión del archivo
         if not allowed_file(archivo.filename):
             flash("Solo se permiten archivos de Excel (.xlsx).", "error")
+            return redirect(url_for("upload"))
+
+        # Crear un backup antes de la actualización
+        if not crear_backup():
+            flash("Error al crear el backup. No se realizaron cambios.", "error")
             return redirect(url_for("upload"))
 
         # Guardar el archivo temporalmente
