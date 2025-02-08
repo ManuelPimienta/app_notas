@@ -1,10 +1,13 @@
 # En models.py
 from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.orm import relationship, sessionmaker, scoped_session
 
-engine = create_engine('sqlite:///app_notas.db', echo=True)
+# Configuración de la base de datos
+engine = create_engine("sqlite:///app_notas.db")  # 
+db_session = scoped_session(sessionmaker(bind=engine))
 Base = declarative_base()
+Base.query = db_session.query_property()
 
 class Curso(Base):
     __tablename__ = 'cursos'

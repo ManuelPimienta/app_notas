@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session as flask_session  # Renombrar la sesión de Flask
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from models import session as db_session, Curso, Estudiante, Nota  # Renombrar la sesión de SQLAlchemy
+from models import session as db_session, engine, Curso, Estudiante, Nota  # Renombrar la sesión de SQLAlchemy
 import pandas as pd
 import os
 from werkzeug.utils import secure_filename
@@ -8,11 +8,22 @@ import os
 import shutil
 from datetime import datetime
 from sqlalchemy import create_engine
+from sqlalchemy.orm import scoped_session, sessionmaker
+import logging
+from logging.handlers import RotatingFileHandler
 
 app = Flask(__name__)
 app.secret_key = "clave_secreta"  # Clave secreta para las sesiones de Flask
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
+
+# Configuración del logging
+logging.basicConfig(level=logging.DEBUG)
+handler = RotatingFileHandler("app.log", maxBytes=10000, backupCount=1)
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+handler.setFormatter(formatter)
+app.logger.addHandler(handler)
 
 # Configuración de la carpeta de backups
 BACKUP_FOLDER = "backups"
@@ -39,12 +50,64 @@ def crear_backup():
 
         # Crear una copia de la base de datos actual
         shutil.copy2(ruta_base_datos, ruta_backup)
-
         print(f"Backup creado exitosamente: {ruta_backup}")
         return True
     except Exception as e:
         print(f"Error al crear el backup: {e}")
         return False
+
+@app.route("/backups")
+@login_required
+def listar_backups():
+    """
+    Muestra una lista de backups disponibles.
+    """
+    try:
+        # Obtener la lista de archivos en la carpeta de backups
+        backups = os.listdir(BACKUP_FOLDER)
+        backups = [f for f in backups if f.endswith(".db")]  # Filtrar solo archivos .db
+        backups.sort(reverse=True)  # Ordenar de más reciente a más antiguo
+    except Exception as e:
+        flash(f"Error al listar los backups: {e}", "error")
+        backups = []
+
+    return render_template("backups.html", backups=backups)
+
+@app.route("/restaurar_backup/<nombre_backup>")
+@login_required
+def restaurar_backup(nombre_backup):
+    """
+    Restaura la base de datos desde un backup seleccionado.
+    """
+    try:
+        # Ruta del backup seleccionado
+        ruta_backup = os.path.join(BACKUP_FOLDER, nombre_backup)
+
+        # Verificar que el backup exista
+        if not os.path.exists(ruta_backup):
+            flash(f"El backup {nombre_backup} no existe.", "error")
+            app.logger.error(f"El backup {nombre_backup} no existe.")
+            return redirect(url_for("listar_backups"))
+
+        # Ruta de la base de datos actual
+        ruta_base_datos = "app_notas.db"  # Cambia esto si tu base de datos tiene otro nombre
+
+        # Reemplazar la base de datos actual con el backup
+        app.logger.debug(f"Restaurando la base de datos desde el backup: {ruta_backup}")
+        shutil.copy2(ruta_backup, ruta_base_datos)
+
+        # Reiniciar la sesión de SQLAlchemy
+        app.logger.debug("Reiniciando la sesión de SQLAlchemy...")
+        db_session.remove()  # Cerrar la sesión actual
+        db_session.configure(bind=engine)  # Reiniciar la sesión con el engine
+
+        flash(f"Base de datos restaurada desde el backup: {nombre_backup}", "success")
+        app.logger.debug(f"Base de datos restaurada desde el backup: {nombre_backup}")
+    except Exception as e:
+        flash(f"Error al restaurar el backup: {e}", "error")
+        app.logger.error(f"Error al restaurar el backup: {e}")
+
+    return redirect(url_for("listar_backups"))
 
 # Configuración de Flask-Login
 login_manager = LoginManager()
@@ -161,6 +224,7 @@ def upload():
             return redirect(url_for("upload"))
 
         # Crear un backup antes de la actualización
+        app.logger.debug("Intentando crear un backup antes de la actualización...")
         if not crear_backup():
             flash("Error al crear el backup. No se realizaron cambios.", "error")
             return redirect(url_for("upload"))
@@ -172,7 +236,8 @@ def upload():
 
         try:
             # Leer el archivo Excel
-            df = pd.read_excel(ruta_archivo, sheet_name="Hoja1", engine="openpyxl")  # Cambia "Hoja1" por el nombre de tu hoja
+            app.logger.debug(f"Leyendo el archivo Excel: {ruta_archivo}")
+            df = pd.read_excel(ruta_archivo, sheet_name="Hoja1", engine="openpyxl")
 
             # Verificar que el archivo no esté vacío
             if df.empty:
@@ -186,9 +251,8 @@ def upload():
                 return redirect(url_for("upload"))
 
             # Limpiar la columna "ID"
-            # Eliminar filas donde la columna "ID" esté vacía o no sea un número válido
-            df = df.dropna(subset=["ID"])  # Eliminar filas con "ID" vacío
-            df = df[pd.to_numeric(df["ID"], errors="coerce").notna()]  # Eliminar filas donde "ID" no sea un número
+            df = df.dropna(subset=["ID"])
+            df = df[pd.to_numeric(df["ID"], errors="coerce").notna()]
 
             # Verificar que el archivo no esté vacío después de la limpieza
             if df.empty:
@@ -205,13 +269,11 @@ def upload():
                 return redirect(url_for("upload"))
 
             # Identificar dinámicamente las columnas de actividades
-            # Todas las columnas que no son obligatorias se consideran actividades
             actividades = [col for col in df.columns if col not in columnas_obligatorias]
-
-            # Filtrar columnas no válidas (por ejemplo, "Unnamed" o vacías)
             actividades = [col for col in actividades if not col.startswith("Unnamed") and not col.strip() == ""]
 
             # Procesar cada fila del archivo
+            app.logger.debug("Procesando filas del archivo Excel...")
             for _, row in df.iterrows():
                 # Reemplazar NaN en campos numéricos
                 running_avg = row["Running Average"] if not pd.isna(row["Running Average"]) else 0.0
@@ -257,9 +319,11 @@ def upload():
                 db_session.commit()
 
             flash("¡Datos actualizados correctamente!", "success")
+            app.logger.debug("Datos actualizados correctamente.")
         except Exception as e:
             db_session.rollback()
             flash(f"Error: {str(e)}", "error")
+            app.logger.error(f"Error al procesar el archivo Excel: {e}")
         finally:
             # Eliminar el archivo temporal
             if os.path.exists(ruta_archivo):
