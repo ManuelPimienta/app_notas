@@ -73,6 +73,7 @@
 2025-02-08 16:15:08,838 - app - DEBUG - Procesando filas del archivo Excel...
 2025-02-08 16:15:09,124 - app - DEBUG - Datos actualizados correctamente.
 2025-02-08 16:15:20,915 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\notas_9A_.xlsx
+<<<<<<< HEAD
 2025-02-12 15:51:30,760 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\notas_11A.xlsx
 2025-02-12 15:51:31,262 - app - ERROR - Error al procesar el archivo Excel: Worksheet named 'Metadatos' not found
 2025-02-12 15:51:55,817 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\11_A_-_Excel_Grade_Tracker_Assessment.xlsx
@@ -97,3 +98,5 @@
 2025-02-12 15:58:14,788 - app - DEBUG - Procesando filas del archivo Excel...
 2025-02-12 15:58:15,067 - app - DEBUG - Datos actualizados correctamente.
 2025-02-12 15:58:49,979 - app - DEBUG - Procesando filas del archivo Excel...
+=======
+>>>>>>> 1e4a1290c59b4e7e788f0576ae7f6ee5847ba573

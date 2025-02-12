@@ -90,12 +90,17 @@ def restaurar_backup(nombre_backup):
             return redirect(url_for("listar_backups"))
 
         # Ruta de la base de datos actual
+<<<<<<< HEAD
         ruta_base_datos = "pp_notas.db"  # Cambia esto si tu base de datos tiene otro nombre
+=======
+        ruta_base_datos = "app_notas.db"  # Cambia esto si tu base de datos tiene otro nombre
+>>>>>>> 1e4a1290c59b4e7e788f0576ae7f6ee5847ba573
 
         # Reemplazar la base de datos actual con el backup
         app.logger.debug(f"Restaurando la base de datos desde el backup: {ruta_backup}")
         shutil.copy2(ruta_backup, ruta_base_datos)
 
+<<<<<<< HEAD
         # --- CORRECCIÓN: Manejo de la sesión de SQLAlchemy ---
         app.logger.debug("Reiniciando la sesión de SQLAlchemy...")
 
@@ -111,6 +116,15 @@ def restaurar_backup(nombre_backup):
         flash(f"Base de datos restaurada desde el backup: {nombre_backup}", "success")
         app.logger.debug(f"Base de datos restaurada desde el backup: {nombre_backup}")
 
+=======
+        # Reiniciar la sesión de SQLAlchemy
+        app.logger.debug("Reiniciando la sesión de SQLAlchemy...")
+        db_session.remove()  # Cerrar la sesión actual
+        db_session.configure(bind=engine)  # Reiniciar la sesión con el engine
+
+        flash(f"Base de datos restaurada desde el backup: {nombre_backup}", "success")
+        app.logger.debug(f"Base de datos restaurada desde el backup: {nombre_backup}")
+>>>>>>> 1e4a1290c59b4e7e788f0576ae7f6ee5847ba573
     except Exception as e:
         flash(f"Error al restaurar el backup: {e}", "error")
         app.logger.error(f"Error al restaurar el backup: {e}")
@@ -243,32 +257,90 @@ def upload():
         archivo.save(ruta_archivo)
 
         try:
+<<<<<<< HEAD
             # Leer el archivo Excel
             app.logger.debug(f"Leyendo el archivo Excel: {ruta_archivo}")
             df = pd.read_excel(ruta_archivo, sheet_name="Hoja1", engine="openpyxl")
 
             # Verificar que el archivo no esté vacío
             if df.empty:
+=======
+            # Leer la hoja de metadatos
+            app.logger.debug(f"Leyendo la hoja de metadatos del archivo Excel: {ruta_archivo}")
+            df_metadatos = pd.read_excel(ruta_archivo, sheet_name="Metadatos", engine="openpyxl")
+
+            # Verificar que el archivo contenga la hoja de metadatos
+            if df_metadatos.empty:
+                flash("El archivo no contiene la hoja de metadatos.", "error")
+                return redirect(url_for("upload"))
+
+            # Verificar que la hoja de metadatos tenga las columnas esperadas
+            if "Campo" not in df_metadatos.columns or "Valor" not in df_metadatos.columns:
+                flash("La hoja de metadatos no tiene las columnas 'Campo' y 'Valor'.", "error")
+                return redirect(url_for("upload"))
+
+            # Verificar que la hoja de metadatos tenga filas con datos
+            if df_metadatos.shape[0] == 0:
+                flash("La hoja de metadatos está vacía. Asegúrate de que tenga datos.", "error")
+                return redirect(url_for("upload"))
+
+            # Convertir la hoja de metadatos a un diccionario
+            metadatos = dict(zip(df_metadatos["Campo"], df_metadatos["Valor"]))
+
+            # Validar que los metadatos coincidan con el curso seleccionado
+            curso_archivo = metadatos.get("Curso")
+            periodo_archivo = metadatos.get("Periodo")
+            profesor_archivo = metadatos.get("Profesor")
+
+            if not curso_archivo:
+                flash("El archivo no contiene el campo 'Curso' en la hoja de metadatos.", "error")
+                return redirect(url_for("upload"))
+
+            if curso_archivo != curso_nombre:
+                flash(f"El archivo corresponde al curso '{curso_archivo}', pero seleccionaste '{curso_nombre}'.", "error")
+                return redirect(url_for("upload"))
+
+            # Mostrar los metadatos en los logs (opcional)
+            app.logger.debug(f"Metadatos del archivo: Curso={curso_archivo}, Periodo={periodo_archivo}, Profesor={profesor_archivo}")
+
+            # Leer la hoja de notas
+            df_notas = pd.read_excel(ruta_archivo, sheet_name="Notas", engine="openpyxl")
+
+            # Verificar que el archivo no esté vacío
+            if df_notas.empty:
+>>>>>>> 1e4a1290c59b4e7e788f0576ae7f6ee5847ba573
                 flash("El archivo no tiene datos válidos.", "error")
                 return redirect(url_for("upload"))
 
             # Columnas obligatorias
             columnas_obligatorias = ["ID", "Estudiante", "Running Average", "Letter Grade", "Conducta2"]
-            if not all(col in df.columns for col in columnas_obligatorias):
+            if not all(col in df_notas.columns for col in columnas_obligatorias):
                 flash("El archivo no tiene las columnas obligatorias.", "error")
                 return redirect(url_for("upload"))
 
             # Limpiar la columna "ID"
+<<<<<<< HEAD
             df = df.dropna(subset=["ID"])
             df = df[pd.to_numeric(df["ID"], errors="coerce").notna()]
 
             # Verificar que el archivo no esté vacío después de la limpieza
             if df.empty:
+=======
+            df_notas = df_notas.dropna(subset=["ID"])
+            df_notas = df_notas[pd.to_numeric(df_notas["ID"], errors="coerce").notna()]
+
+            # Verificar que el archivo no esté vacío después de la limpieza
+            if df_notas.empty:
+>>>>>>> 1e4a1290c59b4e7e788f0576ae7f6ee5847ba573
                 flash("El archivo no tiene datos válidos después de la limpieza.", "error")
                 return redirect(url_for("upload"))
 
             # Convertir la columna "ID" a enteros
+<<<<<<< HEAD
             df["ID"] = df["ID"].astype(int)
+=======
+            df_notas["ID"] = df_notas["ID"].astype(int)
+>>>>>>> 1e4a1290c59b4e7e788f0576ae7f6ee5847ba573
 
             # Buscar o crear el curso
             curso = db_session.query(Curso).filter_by(nombre=curso_nombre).first()
@@ -277,12 +349,20 @@ def upload():
                 return redirect(url_for("upload"))
 
             # Identificar dinámicamente las columnas de actividades
+<<<<<<< HEAD
             actividades = [col for col in df.columns if col not in columnas_obligatorias]
+=======
+            actividades = [col for col in df_notas.columns if col not in columnas_obligatorias]
+>>>>>>> 1e4a1290c59b4e7e788f0576ae7f6ee5847ba573
             actividades = [col for col in actividades if not col.startswith("Unnamed") and not col.strip() == ""]
 
             # Procesar cada fila del archivo
             app.logger.debug("Procesando filas del archivo Excel...")
+<<<<<<< HEAD
             for _, row in df.iterrows():
+=======
+            for _, row in df_notas.iterrows():
+>>>>>>> 1e4a1290c59b4e7e788f0576ae7f6ee5847ba573
                 # Reemplazar NaN en campos numéricos
                 running_avg = row["Running Average"] if not pd.isna(row["Running Average"]) else 0.0
                 conducta = row["Conducta2"] if not pd.isna(row["Conducta2"]) else 0.0
