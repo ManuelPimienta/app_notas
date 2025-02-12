@@ -1,14 +1,121 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session as flask_session  # Renombrar la sesión de Flask
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from models import session as db_session, Curso, Estudiante, Nota  # Renombrar la sesión de SQLAlchemy
+from models import session as db_session, engine, Curso, Estudiante, Nota  # Renombrar la sesión de SQLAlchemy
 import pandas as pd
 import os
 from werkzeug.utils import secure_filename
+import os
+import shutil
+from datetime import datetime
+from sqlalchemy import create_engine
+from sqlalchemy.orm import scoped_session, sessionmaker
+import logging
+from logging.handlers import RotatingFileHandler
 
 app = Flask(__name__)
 app.secret_key = "clave_secreta"  # Clave secreta para las sesiones de Flask
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
+
+# Configuración del logging
+logging.basicConfig(level=logging.DEBUG)
+handler = RotatingFileHandler("app.log", maxBytes=10000, backupCount=1)
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+handler.setFormatter(formatter)
+app.logger.addHandler(handler)
+
+# Configuración de la carpeta de backups
+BACKUP_FOLDER = "backups"
+if not os.path.exists(BACKUP_FOLDER):
+    os.makedirs(BACKUP_FOLDER)
+
+def crear_backup():
+    """
+    Crea una copia de seguridad de la base de datos antes de una actualización.
+    """
+    try:
+        # Nombre del archivo de backup (incluye la fecha y hora actual)
+        fecha_hora = datetime.now().strftime("%Y%m%d_%H%M%S")
+        nombre_backup = f"backup_{fecha_hora}.db"
+        ruta_backup = os.path.join(BACKUP_FOLDER, nombre_backup)
+
+        # Ruta de la base de datos actual
+        ruta_base_datos = "app_notas.db"  # Cambia esto si tu base de datos tiene otro nombre o ruta
+
+        # Verificar si el archivo de la base de datos existe
+        if not os.path.exists(ruta_base_datos):
+            print(f"Error: No se encontró el archivo de la base de datos en {ruta_base_datos}")
+            return False
+
+        # Crear una copia de la base de datos actual
+        shutil.copy2(ruta_base_datos, ruta_backup)
+        print(f"Backup creado exitosamente: {ruta_backup}")
+        return True
+    except Exception as e:
+        print(f"Error al crear el backup: {e}")
+        return False
+
+@app.route("/backups")
+@login_required
+def listar_backups():
+    """
+    Muestra una lista de backups disponibles.
+    """
+    try:
+        # Obtener la lista de archivos en la carpeta de backups
+        backups = os.listdir(BACKUP_FOLDER)
+        backups = [f for f in backups if f.endswith(".db")]  # Filtrar solo archivos .db
+        backups.sort(reverse=True)  # Ordenar de más reciente a más antiguo
+    except Exception as e:
+        flash(f"Error al listar los backups: {e}", "error")
+        backups = []
+
+    return render_template("backups.html", backups=backups)
+
+@app.route("/restaurar_backup/<nombre_backup>")
+@login_required
+def restaurar_backup(nombre_backup):
+    """
+    Restaura la base de datos desde un backup seleccionado.
+    """
+    try:
+        # Ruta del backup seleccionado
+        ruta_backup = os.path.join(BACKUP_FOLDER, nombre_backup)
+
+        # Verificar que el backup exista
+        if not os.path.exists(ruta_backup):
+            flash(f"El backup {nombre_backup} no existe.", "error")
+            app.logger.error(f"El backup {nombre_backup} no existe.")
+            return redirect(url_for("listar_backups"))
+
+        # Ruta de la base de datos actual
+        ruta_base_datos = "pp_notas.db"  # Cambia esto si tu base de datos tiene otro nombre
+
+        # Reemplazar la base de datos actual con el backup
+        app.logger.debug(f"Restaurando la base de datos desde el backup: {ruta_backup}")
+        shutil.copy2(ruta_backup, ruta_base_datos)
+
+        # --- CORRECCIÓN: Manejo de la sesión de SQLAlchemy ---
+        app.logger.debug("Reiniciando la sesión de SQLAlchemy...")
+
+        # 1. Cerrar la sesión actual (si existe)
+        if db_session:  # Verifica si db_session existe
+            db_session.close()  # Usa close() para cerrar la sesión
+
+        # 2. Reconfigurar la sesión con el nuevo engine
+        db_session.bind = engine  # Asigna el engine a la sesión
+
+        # --- FIN DE LA CORRECCIÓN ---
+
+        flash(f"Base de datos restaurada desde el backup: {nombre_backup}", "success")
+        app.logger.debug(f"Base de datos restaurada desde el backup: {nombre_backup}")
+
+    except Exception as e:
+        flash(f"Error al restaurar el backup: {e}", "error")
+        app.logger.error(f"Error al restaurar el backup: {e}")
+
+    return redirect(url_for("listar_backups"))
 
 # Configuración de Flask-Login
 login_manager = LoginManager()
@@ -101,7 +208,10 @@ def notas_estudiante():
     estudiante = db_session.query(Estudiante).filter_by(id=flask_session['estudiante_id']).first()
     notas = db_session.query(Nota).filter_by(estudiante_id=estudiante.id).all()
 
-    return render_template("notas_estudiante.html", notas=notas, estudiante=estudiante)
+    # Obtener las actividades únicas
+    actividades = list(set(nota.actividad for nota in notas))
+
+    return render_template("notas_estudiante.html", notas=notas, estudiante=estudiante, actividades=actividades)
 
 # Ruta para subir archivos de Excel
 @app.route("/upload", methods=["GET", "POST"])
@@ -121,6 +231,12 @@ def upload():
             flash("Solo se permiten archivos de Excel (.xlsx).", "error")
             return redirect(url_for("upload"))
 
+        # Crear un backup antes de la actualización
+        app.logger.debug("Intentando crear un backup antes de la actualización...")
+        if not crear_backup():
+            flash("Error al crear el backup. No se realizaron cambios.", "error")
+            return redirect(url_for("upload"))
+
         # Guardar el archivo temporalmente
         filename = secure_filename(archivo.filename)
         ruta_archivo = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -128,15 +244,10 @@ def upload():
 
         try:
             # Leer el archivo Excel
-            df = pd.read_excel(ruta_archivo)
-            
-            # Eliminar filas completamente vacías
-            df = df.dropna(how="all")
-            
-            # Eliminar filas donde las columnas obligatorias estén vacías
-            df = df.dropna(subset=["ID", "Estudiante"])
-            
-            # Verificar que el archivo no esté vacío después de la limpieza
+            app.logger.debug(f"Leyendo el archivo Excel: {ruta_archivo}")
+            df = pd.read_excel(ruta_archivo, sheet_name="Hoja1", engine="openpyxl")
+
+            # Verificar que el archivo no esté vacío
             if df.empty:
                 flash("El archivo no tiene datos válidos.", "error")
                 return redirect(url_for("upload"))
@@ -147,12 +258,17 @@ def upload():
                 flash("El archivo no tiene las columnas obligatorias.", "error")
                 return redirect(url_for("upload"))
 
-            # Convertir ID a entero
-            try:
-                df["ID"] = df["ID"].astype(int)
-            except ValueError:
-                flash("La columna 'ID' debe contener solo números enteros.", "error")
+            # Limpiar la columna "ID"
+            df = df.dropna(subset=["ID"])
+            df = df[pd.to_numeric(df["ID"], errors="coerce").notna()]
+
+            # Verificar que el archivo no esté vacío después de la limpieza
+            if df.empty:
+                flash("El archivo no tiene datos válidos después de la limpieza.", "error")
                 return redirect(url_for("upload"))
+
+            # Convertir la columna "ID" a enteros
+            df["ID"] = df["ID"].astype(int)
 
             # Buscar o crear el curso
             curso = db_session.query(Curso).filter_by(nombre=curso_nombre).first()
@@ -160,7 +276,12 @@ def upload():
                 flash("El curso seleccionado no existe.", "error")
                 return redirect(url_for("upload"))
 
+            # Identificar dinámicamente las columnas de actividades
+            actividades = [col for col in df.columns if col not in columnas_obligatorias]
+            actividades = [col for col in actividades if not col.startswith("Unnamed") and not col.strip() == ""]
+
             # Procesar cada fila del archivo
+            app.logger.debug("Procesando filas del archivo Excel...")
             for _, row in df.iterrows():
                 # Reemplazar NaN en campos numéricos
                 running_avg = row["Running Average"] if not pd.isna(row["Running Average"]) else 0.0
@@ -195,7 +316,6 @@ def upload():
                 db_session.commit()
 
                 # Guardar las notas dinámicamente
-                actividades = [col for col in df.columns if col.startswith("Actividad")]
                 for actividad in actividades:
                     calificacion = row[actividad] if not pd.isna(row[actividad]) else 0.0
                     nota = Nota(
@@ -207,9 +327,11 @@ def upload():
                 db_session.commit()
 
             flash("¡Datos actualizados correctamente!", "success")
+            app.logger.debug("Datos actualizados correctamente.")
         except Exception as e:
             db_session.rollback()
             flash(f"Error: {str(e)}", "error")
+            app.logger.error(f"Error al procesar el archivo Excel: {e}")
         finally:
             # Eliminar el archivo temporal
             if os.path.exists(ruta_archivo):
