@@ -90,7 +90,7 @@ def restaurar_backup(nombre_backup):
             return redirect(url_for("listar_backups"))
 
         # Ruta de la base de datos actual
-        ruta_base_datos = "pp_notas.db"  # Cambia esto si tu base de datos tiene otro nombre
+        ruta_base_datos = "app_notas.db"  # Cambia esto si tu base de datos tiene otro nombre
 
         # Reemplazar la base de datos actual con el backup
         app.logger.debug(f"Restaurando la base de datos desde el backup: {ruta_backup}")
