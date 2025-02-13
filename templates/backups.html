@@ -37,6 +37,7 @@
             <table class="table table-bordered table-striped">
                 <thead class="table-primary">
                     <tr>
+                        <th>Curso</th>
                         <th>Nombre del Backup</th>
                         <th>Acciones</th>
                     </tr>
@@ -44,9 +45,10 @@
                 <tbody>
                     {% for backup in backups %}
                     <tr>
-                        <td>{{ backup }}</td>
+                        <td>{{ backup.curso }}</td>
+                        <td>{{ backup.nombre }}</td>
                         <td>
-                            <a href="{{ url_for('restaurar_backup', nombre_backup=backup) }}" class="btn btn-warning btn-sm">
+                            <a href="{{ url_for('restaurar_backup', nombre_backup=backup.nombre, curso=backup.curso) }}" class="btn btn-warning btn-sm">
                                 Restaurar
                             </a>
                         </td>

@@ -7,7 +7,7 @@ from werkzeug.utils import secure_filename
 import os
 import shutil
 from datetime import datetime
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine 
 from sqlalchemy.orm import scoped_session, sessionmaker
 import logging
 from logging.handlers import RotatingFileHandler
@@ -30,18 +30,26 @@ BACKUP_FOLDER = "backups"
 if not os.path.exists(BACKUP_FOLDER):
     os.makedirs(BACKUP_FOLDER)
 
-def crear_backup():
+def crear_backup(curso_nombre):
     """
     Crea una copia de seguridad de la base de datos antes de una actualización.
     """
     try:
-        # Nombre del archivo de backup (incluye la fecha y hora actual)
+        # Normalizar el nombre del curso (reemplazar espacios con guiones bajos)
+        curso_normalizado = curso_nombre.replace(" ", "_")
+
+        # Crear una subcarpeta para el curso si no existe
+        carpeta_curso = os.path.join(BACKUP_FOLDER, curso_normalizado)
+        if not os.path.exists(carpeta_curso):
+            os.makedirs(carpeta_curso)
+
+        # Nombre del archivo de backup (incluye el nombre del curso, la fecha y la hora)
         fecha_hora = datetime.now().strftime("%Y%m%d_%H%M%S")
-        nombre_backup = f"backup_{fecha_hora}.db"
-        ruta_backup = os.path.join(BACKUP_FOLDER, nombre_backup)
+        nombre_backup = f"backup_{curso_normalizado}_{fecha_hora}.db"  # Incluir el nombre del curso
+        ruta_backup = os.path.join(carpeta_curso, nombre_backup)
 
         # Ruta de la base de datos actual
-        ruta_base_datos = "app_notas.db"  # Cambia esto si tu base de datos tiene otro nombre o ruta
+        ruta_base_datos = "app_notas.db"  # Cambia esto si tu base de datos tiene otro nombre
 
         # Verificar si el archivo de la base de datos existe
         if not os.path.exists(ruta_base_datos):
@@ -50,6 +58,7 @@ def crear_backup():
 
         # Crear una copia de la base de datos actual
         shutil.copy2(ruta_base_datos, ruta_backup)
+
         print(f"Backup creado exitosamente: {ruta_backup}")
         return True
     except Exception as e:
@@ -63,57 +72,66 @@ def listar_backups():
     Muestra una lista de backups disponibles.
     """
     try:
-        # Obtener la lista de archivos en la carpeta de backups
-        backups = os.listdir(BACKUP_FOLDER)
-        backups = [f for f in backups if f.endswith(".db")]  # Filtrar solo archivos .db
-        backups.sort(reverse=True)  # Ordenar de más reciente a más antiguo
+        backups = []
+        # Recorrer todas las subcarpetas de la carpeta de backups
+        for curso_normalizado in os.listdir(BACKUP_FOLDER):
+            carpeta_curso = os.path.join(BACKUP_FOLDER, curso_normalizado)
+            if os.path.isdir(carpeta_curso):
+                # Obtener los archivos de backup en la subcarpeta del curso
+                archivos_backup = os.listdir(carpeta_curso)
+                archivos_backup = [f for f in archivos_backup if f.endswith(".db")]  # Filtrar solo archivos .db
+                archivos_backup.sort(reverse=True)  # Ordenar de más reciente a más antiguo
+
+                # Agregar los backups a la lista
+                for archivo in archivos_backup:
+                    backups.append({
+                        "curso": curso_normalizado.replace("_", " "),  # Revertir la normalización
+                        "nombre": archivo,
+                        "ruta": os.path.join(carpeta_curso, archivo)
+                    })
+
+        # Ordenar los backups por fecha (opcional)
+        backups.sort(key=lambda x: x["nombre"], reverse=True)
     except Exception as e:
         flash(f"Error al listar los backups: {e}", "error")
         backups = []
 
     return render_template("backups.html", backups=backups)
 
-@app.route("/restaurar_backup/<nombre_backup>")
+# Restaurar_backup
+@app.route("/restaurar_backup/<curso>/<nombre_backup>")
 @login_required
-def restaurar_backup(nombre_backup):
+def restaurar_backup(curso, nombre_backup):
     """
     Restaura la base de datos desde un backup seleccionado.
     """
     try:
+        # Normalizar el nombre del curso (reemplazar espacios con guiones bajos)
+        curso_normalizado = curso.replace(" ", "_")
+
         # Ruta del backup seleccionado
-        ruta_backup = os.path.join(BACKUP_FOLDER, nombre_backup)
+        ruta_backup = os.path.join(BACKUP_FOLDER, curso_normalizado, nombre_backup)
 
         # Verificar que el backup exista
         if not os.path.exists(ruta_backup):
             flash(f"El backup {nombre_backup} no existe.", "error")
-            app.logger.error(f"El backup {nombre_backup} no existe.")
             return redirect(url_for("listar_backups"))
 
         # Ruta de la base de datos actual
         ruta_base_datos = "app_notas.db"  # Cambia esto si tu base de datos tiene otro nombre
 
         # Reemplazar la base de datos actual con el backup
-        app.logger.debug(f"Restaurando la base de datos desde el backup: {ruta_backup}")
         shutil.copy2(ruta_backup, ruta_base_datos)
 
-        # --- CORRECCIÓN: Manejo de la sesión de SQLAlchemy ---
-        app.logger.debug("Reiniciando la sesión de SQLAlchemy...")
+        # Cerrar la sesión actual de SQLAlchemy
+        db_session.close()  # Cerrar la sesión actual
 
-        # 1. Cerrar la sesión actual (si existe)
-        if db_session:  # Verifica si db_session existe
-            db_session.close()  # Usa close() para cerrar la sesión
-
-        # 2. Reconfigurar la sesión con el nuevo engine
-        db_session.bind = engine  # Asigna el engine a la sesión
-
-        # --- FIN DE LA CORRECCIÓN ---
+        # Reiniciar la sesión de SQLAlchemy (no es necesario llamar a configure)
+        # SQLAlchemy creará una nueva sesión automáticamente cuando sea necesario
 
         flash(f"Base de datos restaurada desde el backup: {nombre_backup}", "success")
-        app.logger.debug(f"Base de datos restaurada desde el backup: {nombre_backup}")
-
     except Exception as e:
         flash(f"Error al restaurar el backup: {e}", "error")
-        app.logger.error(f"Error al restaurar el backup: {e}")
 
     return redirect(url_for("listar_backups"))
 
@@ -232,8 +250,8 @@ def upload():
             return redirect(url_for("upload"))
 
         # Crear un backup antes de la actualización
-        app.logger.debug("Intentando crear un backup antes de la actualización...")
-        if not crear_backup():
+        app.logger.debug(f"Intentando crear un backup para el curso: {curso_nombre}")
+        if not crear_backup(curso_nombre):
             flash("Error al crear el backup. No se realizaron cambios.", "error")
             return redirect(url_for("upload"))
 
