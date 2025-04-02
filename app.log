@@ -6,3 +6,19 @@
 2025-02-14 09:26:00,645 - app - DEBUG - Metadatos del archivo: Curso=Ciencias Sociales 11B, Periodo=2025-1, Profesor=Manuel Pimienta
 2025-02-14 09:26:00,677 - app - DEBUG - Procesando filas del archivo Excel...
 2025-02-14 09:26:01,066 - app - DEBUG - Datos actualizados correctamente.
+2025-04-02 16:30:57,752 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\Notas_11A.xlsx
+2025-04-02 16:30:58,186 - app - DEBUG - Metadatos del archivo: Curso=Ciencias Sociales 11A, Periodo=2025-1, Profesor=Manuel Pimienta
+2025-04-02 16:30:58,203 - app - DEBUG - Procesando filas del archivo Excel...
+2025-04-02 16:30:58,309 - app - ERROR - Error al procesar el archivo Excel: (builtins.ValueError) could not convert string to float: 'no vino'
+[SQL: INSERT INTO notas (estudiante_id, actividad, calificacion) VALUES (?, ?, ?) RETURNING id]
+[parameters: [{'estudiante_id': 1069481720, 'calificacion': 'no vino', 'actividad': '1er Examen  Guerra Fría'}, {'estudiante_id': 1069481720, 'calificacion': '2 no vino la clase anterior', 'actividad': 'Rev. Trabajo conflictos'}, {'estudiante_id': 1069481720, 'calificacion': 5.0, 'actividad': 'Exposición competencias '}, {'estudiante_id': 1069481720, 'calificacion': 8.0, 'actividad': 'Calificación pares'}, {'estudiante_id': 1069481720, 'calificacion': 7.0, 'actividad': 'Infografía'}, {'estudiante_id': 1069481720, 'calificacion': 0.0, 'actividad': 'Expo. Conflicto y prespectivas '}, {'estudiante_id': 1069481720, 'calificacion': 0.0, 'actividad': 'Reflexion individual debate'}, {'estudiante_id': 1069481720, 'calificacion': 'No vino', 'actividad': 'Debate G. Fría'}]]
+2025-04-02 16:32:15,594 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\Notas_11A.xlsx
+2025-04-02 16:32:15,623 - app - DEBUG - Metadatos del archivo: Curso=Ciencias Sociales 11A, Periodo=2025-1, Profesor=Manuel Pimienta
+2025-04-02 16:32:15,641 - app - DEBUG - Procesando filas del archivo Excel...
+2025-04-02 16:32:15,978 - app - DEBUG - Datos actualizados correctamente.
+2025-04-02 16:34:32,681 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\Notas_11B.xlsx
+2025-04-02 16:34:32,711 - app - DEBUG - Metadatos del archivo: Curso=Ciencias Sociales 11B, Periodo=2025-1, Profesor=Manuel Pimienta
+2025-04-02 16:36:57,015 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\Notas_11B.xlsx
+2025-04-02 16:36:57,043 - app - DEBUG - Metadatos del archivo: Curso=Ciencias Sociales 11B, Periodo=2025-1, Profesor=Manuel Pimienta
+2025-04-02 16:36:57,064 - app - DEBUG - Procesando filas del archivo Excel...
+2025-04-02 16:36:57,488 - app - DEBUG - Datos actualizados correctamente.
