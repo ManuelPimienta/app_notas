@@ -22,3 +22,17 @@
 2025-04-02 16:36:57,043 - app - DEBUG - Metadatos del archivo: Curso=Ciencias Sociales 11B, Periodo=2025-1, Profesor=Manuel Pimienta
 2025-04-02 16:36:57,064 - app - DEBUG - Procesando filas del archivo Excel...
 2025-04-02 16:36:57,488 - app - DEBUG - Datos actualizados correctamente.
+2025-06-21 15:55:44,368 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\Notas_11A.xlsx
+2025-06-21 15:55:44,806 - app - DEBUG - Metadatos del archivo: Curso=Ciencias Sociales 11A, Periodo=2025-1, Profesor=Manuel Pimienta
+2025-06-21 15:55:44,824 - app - DEBUG - Procesando filas del archivo Excel...
+2025-06-21 15:55:45,114 - app - ERROR - Error al procesar el archivo Excel: (builtins.ValueError) could not convert string to float: '10 +'
+[SQL: INSERT INTO notas (estudiante_id, actividad, calificacion) VALUES (?, ?, ?) RETURNING id]
+[parameters: [{'calificacion': 10.0, 'estudiante_id': 1104420137, 'actividad': 'Participacion conversatorio'}, {'calificacion': '10 +', 'estudiante_id': 1104420137, 'actividad': 'Act 2 - previa debate globalizacion'}, {'calificacion': 8.8, 'estudiante_id': 1104420137, 'actividad': 'Proyecto debate globalización'}, {'calificacion': 0.0, 'estudiante_id': 1104420137, 'actividad': 'Examen globalizacion'}, {'calificacion': 6.8, 'estudiante_id': 1104420137, 'actividad': 'Exposicion mecanismos de participacion'}, {'calificacion': 7.6, 'estudiante_id': 1104420137, 'actividad': 'Auto evaluacion'}]]
+2025-06-21 15:56:15,638 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\Notas_11A.xlsx
+2025-06-21 15:56:15,664 - app - DEBUG - Metadatos del archivo: Curso=Ciencias Sociales 11A, Periodo=2025-1, Profesor=Manuel Pimienta
+2025-06-21 15:56:15,682 - app - DEBUG - Procesando filas del archivo Excel...
+2025-06-21 15:56:15,992 - app - DEBUG - Datos actualizados correctamente.
+2025-06-21 15:56:27,193 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\Notas_11B.xlsx
+2025-06-21 15:56:27,214 - app - DEBUG - Metadatos del archivo: Curso=Ciencias Sociales 11B, Periodo=2025-1, Profesor=Manuel Pimienta
+2025-06-21 15:56:27,229 - app - DEBUG - Procesando filas del archivo Excel...
+2025-06-21 15:56:27,652 - app - DEBUG - Datos actualizados correctamente.
