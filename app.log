@@ -36,3 +36,7 @@
 2025-06-21 15:56:27,214 - app - DEBUG - Metadatos del archivo: Curso=Ciencias Sociales 11B, Periodo=2025-1, Profesor=Manuel Pimienta
 2025-06-21 15:56:27,229 - app - DEBUG - Procesando filas del archivo Excel...
 2025-06-21 15:56:27,652 - app - DEBUG - Datos actualizados correctamente.
+2025-06-25 14:29:11,780 - app - DEBUG - Leyendo la hoja de metadatos del archivo Excel: uploads\Notas_10A.xlsx
+2025-06-25 14:29:12,215 - app - DEBUG - Metadatos del archivo: Curso=Ciencias Sociales 10A, Periodo=2025-1, Profesor=Manuel Pimienta
+2025-06-25 14:29:12,233 - app - DEBUG - Procesando filas del archivo Excel...
+2025-06-25 14:29:12,647 - app - DEBUG - Datos actualizados correctamente.
